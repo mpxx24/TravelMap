@@ -1,0 +1,60 @@
+@{
+    var isAuthenticated = User?.Identity?.IsAuthenticated == true;
+    var userName = User?.Identity?.Name ?? "";
+    var userEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var avatarUrl = User?.FindFirst("urn:google:picture")?.Value ?? "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TravelMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <!-- Auth bar (top-right floating) -->
+    <div class="auth-bar">
+        @if (isAuthenticated)
+        {
+            @if (!string.IsNullOrEmpty(avatarUrl))
+            {
+                <img src="@avatarUrl" alt="@userName" class="auth-avatar" referrerpolicy="no-referrer" />
+            }
+            <span class="auth-name">@userName</span>
+            <form method="post" asp-controller="Account" asp-action="Logout" class="d-inline">
+                <button type="submit" class="auth-btn" title="Sign out">
+                    <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </form>
+        }
+        else
+        {
+            <a href="/account/login" class="auth-btn auth-login">
+                <i class="bi bi-google"></i> Sign in
+            </a>
+        }
+        <button id="theme-toggle" class="auth-btn" title="Toggle theme">
+            <i class="bi bi-moon-stars" id="theme-icon"></i>
+        </button>
+    </div>
+
+    @RenderBody()
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        // Pass auth state to JS
+        window.TravelMapConfig = {
+            isAuthenticated: @(isAuthenticated ? "true" : "false"),
+            userEmail: "@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(userEmail))"
+        };
+    </script>
+    <script src="~/js/travelmap.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

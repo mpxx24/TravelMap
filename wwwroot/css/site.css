@@ -1,0 +1,378 @@
+/* ============================================================
+   TravelMap — Dark/Light Theme
+   Follows ActivitiesJournal CSS variable pattern
+   ============================================================ */
+
+/* Default: Dark theme */
+:root {
+  --body-bg: #0d1117;
+  --body-color: #e5e7eb;
+  --card-bg: #161b22;
+  --card-border: rgba(48, 54, 61, 0.8);
+  --input-bg: #161b22;
+  --input-color: #e5e7eb;
+  --input-border: #30363d;
+  --muted-color: #9ca3af;
+  --popup-bg: #161b22;
+  --popup-border: #30363d;
+  --popup-shadow: rgba(0, 0, 0, 0.5);
+  --legend-bg: rgba(22, 27, 34, 0.92);
+  --auth-bg: rgba(22, 27, 34, 0.92);
+  --btn-bg: #21262d;
+  --btn-hover-bg: #30363d;
+  --btn-color: #e5e7eb;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --body-bg: #f3f4f6;
+  --body-color: #111827;
+  --card-bg: #ffffff;
+  --card-border: rgba(209, 213, 219, 0.8);
+  --input-bg: #ffffff;
+  --input-color: #111827;
+  --input-border: #d1d5db;
+  --muted-color: #6b7280;
+  --popup-bg: #ffffff;
+  --popup-border: #d1d5db;
+  --popup-shadow: rgba(0, 0, 0, 0.15);
+  --legend-bg: rgba(255, 255, 255, 0.95);
+  --auth-bg: rgba(255, 255, 255, 0.95);
+  --btn-bg: #e5e7eb;
+  --btn-hover-bg: #d1d5db;
+  --btn-color: #111827;
+}
+
+/* ---- Theme toggle (immediate, before DOMContentLoaded) ---- */
+
+/* ---- Base ---- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--body-bg);
+  color: var(--body-color);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* ---- Full-page map ---- */
+#map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ---- Auth bar (top-right) ---- */
+.auth-bar {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--auth-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  backdrop-filter: blur(8px);
+}
+
+.auth-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.auth-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--body-color);
+}
+
+.auth-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 16px;
+  background: var(--btn-bg);
+  color: var(--btn-color);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+
+.auth-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--btn-color);
+}
+
+.auth-login {
+  background: #4285f4;
+  color: #fff;
+}
+
+.auth-login:hover {
+  background: #3367d6;
+  color: #fff;
+}
+
+/* ---- Legend (bottom-left) ---- */
+.map-legend {
+  position: fixed;
+  bottom: 24px;
+  left: 12px;
+  z-index: 1000;
+  padding: 14px 18px;
+  background: var(--legend-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  min-width: 170px;
+}
+
+.legend-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--body-color);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  color: var(--body-color);
+}
+
+.legend-color {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.legend-stats {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--card-border);
+  font-size: 0.75rem;
+  color: var(--muted-color);
+}
+
+/* ---- Leaflet popup overrides ---- */
+.leaflet-popup-content-wrapper {
+  background: var(--popup-bg) !important;
+  color: var(--body-color) !important;
+  border: 1px solid var(--popup-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px var(--popup-shadow) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--popup-bg) !important;
+  border: 1px solid var(--popup-border) !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.85rem !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--muted-color) !important;
+  font-size: 20px !important;
+  top: 8px !important;
+  right: 10px !important;
+}
+
+/* ---- Popup form ---- */
+.popup-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.popup-form label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-color);
+  margin-bottom: 4px;
+  margin-top: 10px;
+}
+
+.popup-form .radio-group {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.popup-form .radio-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--body-color);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.popup-form .radio-btn:hover {
+  border-color: var(--body-color);
+}
+
+.popup-form .radio-btn.active {
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.popup-form .radio-btn.active[data-value="1"] {
+  background: #28a745;
+  color: #fff;
+}
+
+.popup-form .radio-btn.active[data-value="2"] {
+  background: #17a2b8;
+  color: #fff;
+}
+
+.popup-form .radio-btn.active[data-value="3"] {
+  background: #ffc107;
+  color: #000;
+}
+
+.popup-form input[type="date"],
+.popup-form textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+}
+
+.popup-form textarea {
+  resize: vertical;
+  min-height: 50px;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.popup-actions .btn-save {
+  flex: 1;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #28a745;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.popup-actions .btn-save:hover {
+  background: #218838;
+}
+
+.popup-actions .btn-remove {
+  padding: 7px 14px;
+  border: 1px solid #dc3545;
+  border-radius: 8px;
+  background: transparent;
+  color: #dc3545;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.popup-actions .btn-remove:hover {
+  background: #dc3545;
+  color: #fff;
+}
+
+/* ---- Leaflet tooltip ---- */
+.country-tooltip {
+  background: var(--popup-bg) !important;
+  color: var(--body-color) !important;
+  border: 1px solid var(--popup-border) !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.8rem !important;
+  box-shadow: 0 2px 8px var(--popup-shadow) !important;
+}
+
+.country-tooltip::before {
+  border-top-color: var(--popup-border) !important;
+}
+
+/* ---- Responsive: popup as bottom sheet on mobile ---- */
+@media (max-width: 480px) {
+  .auth-bar {
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+  }
+
+  .auth-name {
+    display: none;
+  }
+
+  .map-legend {
+    bottom: 12px;
+    left: 8px;
+    right: 8px;
+    min-width: unset;
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px 12px 0 0 !important;
+  }
+}
+
+/* ---- Leaflet controls theme ---- */
+.leaflet-control-zoom a {
+  background: var(--btn-bg) !important;
+  color: var(--btn-color) !important;
+  border-color: var(--card-border) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--btn-hover-bg) !important;
+}
+
+.leaflet-control-attribution {
+  background: var(--legend-bg) !important;
+  color: var(--muted-color) !important;
+  font-size: 0.65rem !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--muted-color) !important;
+}
+
+/* d-inline utility */
+.d-inline { display: inline !important; }
