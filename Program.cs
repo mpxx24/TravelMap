@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using TravelMap.Services;
+using TravelMap;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +36,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Travel data storage
-builder.Services.AddSingleton<TravelDataService>();
+builder.Services.AddTravelMapServices(builder.Configuration);
 
 var app = builder.Build();
 

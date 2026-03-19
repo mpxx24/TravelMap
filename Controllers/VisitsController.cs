@@ -10,56 +10,54 @@ namespace TravelMap.Controllers;
 [ApiController]
 public class VisitsController : ControllerBase
 {
-    private readonly TravelDataService _service;
+    private readonly ITravelDataService _service;
+    private readonly ILogger<VisitsController> _logger;
 
-    public VisitsController(TravelDataService service)
+    public VisitsController(ITravelDataService service, ILogger<VisitsController> logger)
     {
         _service = service;
+        _logger = logger;
     }
 
     [HttpGet]
     [Authorize]
-    public IActionResult GetVisits()
+    public async Task<IActionResult> GetVisitsAsync(CancellationToken ct)
     {
         var email = GetEmail();
         if (email == null) return Unauthorized();
 
-        var data = _service.Load(email);
+        var data = await _service.LoadAsync(email, ct);
+        _logger.LogInformation("Loaded {Count} visits for {Email}", data.Visits.Count, email);
         return Ok(data.Visits);
     }
 
     [HttpPost]
     [Authorize]
-    public IActionResult SaveVisit([FromBody] CountryVisit visit)
+    public async Task<IActionResult> SaveVisitAsync([FromBody] CountryVisit visit, CancellationToken ct)
     {
+        if (visit == null || string.IsNullOrEmpty(visit.CountryCode))
+            return BadRequest("Visit with a valid CountryCode is required.");
+
         var email = GetEmail();
         if (email == null) return Unauthorized();
 
-        var data = _service.Load(email);
-        var existing = data.Visits.FindIndex(v =>
-            v.CountryCode.Equals(visit.CountryCode, StringComparison.OrdinalIgnoreCase));
-
-        if (existing >= 0)
-            data.Visits[existing] = visit;
-        else
-            data.Visits.Add(visit);
-
-        _service.Save(data);
-        return Ok(visit);
+        var saved = await _service.UpsertVisitAsync(email, visit, ct);
+        _logger.LogInformation("Upserted visit for {CountryCode} by {Email}", visit.CountryCode, email);
+        return Ok(saved);
     }
 
     [HttpDelete("{countryCode}")]
     [Authorize]
-    public IActionResult DeleteVisit(string countryCode)
+    public async Task<IActionResult> DeleteVisitAsync(string countryCode, CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(countryCode))
+            return BadRequest("Country code is required.");
+
         var email = GetEmail();
         if (email == null) return Unauthorized();
 
-        var data = _service.Load(email);
-        data.Visits.RemoveAll(v =>
-            v.CountryCode.Equals(countryCode, StringComparison.OrdinalIgnoreCase));
-
-        _service.Save(data);
+        await _service.DeleteVisitAsync(email, countryCode, ct);
+        _logger.LogInformation("Deleted visit for {CountryCode} by {Email}", countryCode, email);
         return Ok();
     }
 
