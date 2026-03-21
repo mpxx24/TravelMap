@@ -23,6 +23,9 @@ param storageAccountName string
 @description('Name of the existing Application Insights')
 param appInsightsName string
 
+@description('Name of the existing Log Analytics Workspace (from ActivitiesJournal)')
+param logAnalyticsWorkspaceName string
+
 @description('Object ID of the deployer — gets Key Vault Secrets Officer role')
 param deployerObjectId string = ''
 
@@ -43,6 +46,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing 
 
 resource appInsights 'Microsoft.Insights/components@2020-02-02' existing = {
   name: appInsightsName
+}
+
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: logAnalyticsWorkspaceName
 }
 
 // ------------------------------------------------------------
@@ -133,6 +140,23 @@ resource kvDeployerRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', kvSecretsOfficerRoleId)
     principalId: deployerObjectId
     principalType: 'User'
+  }
+}
+
+// ------------------------------------------------------------
+// Diagnostic Settings — App Service → Log Analytics
+// ------------------------------------------------------------
+resource appServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'diag-${appName}'
+  scope: appService
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      { category: 'AppServiceHTTPLogs',    enabled: true }
+      { category: 'AppServiceConsoleLogs', enabled: true }
+      { category: 'AppServiceAppLogs',     enabled: true }
+      { category: 'AppServiceAuditLogs',   enabled: true }
+    ]
   }
 }
 

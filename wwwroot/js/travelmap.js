@@ -292,16 +292,6 @@ document.addEventListener("DOMContentLoaded", function () {
         data.forEach(function (v) {
           visits[v.countryCode] = v;
         });
-        updateStats();
-        // Re-style all countries
-        if (geoLayer) {
-          geoLayer.eachLayer(function (layer) {
-            var code =
-              layer.feature.properties.ISO_A3 ||
-              layer.feature.properties.ADM0_A3;
-            layer.setStyle(getStyle(layer.feature, !!visits[code]));
-          });
-        }
       })
       .catch(function (err) {
         console.error("Load visits error:", err);
@@ -319,25 +309,39 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // ---- Load GeoJSON ----
-  fetch("/data/countries.geojson")
-    .then(function (res) {
-      return res.json();
-    })
-    .then(function (geojson) {
+  // ---- Load GeoJSON + visits in parallel ----
+  var geojsonPromise = fetch("/data/countries.geojson").then(function (res) {
+    return res.json();
+  });
+
+  var visitsPromise = loadVisits();
+
+  Promise.all([geojsonPromise, visitsPromise])
+    .then(function (results) {
+      var geojson = results[0];
+
       geoLayer = L.geoJSON(geojson, {
         style: function (feature) {
-          return getStyle(feature, false);
+          var code = feature.properties.ISO_A3 || feature.properties.ADM0_A3;
+          return getStyle(feature, !!visits[code]);
         },
         onEachFeature: onEachFeature,
       }).addTo(map);
 
-      // Load visits after GeoJSON is ready
-      loadVisits();
+      updateStats();
+      hideLoading();
     })
     .catch(function (err) {
-      console.error("GeoJSON load error:", err);
+      console.error("Map load error:", err);
+      hideLoading();
     });
+
+  function hideLoading() {
+    var overlay = document.getElementById("map-loading");
+    if (!overlay) return;
+    overlay.classList.add("fade-out");
+    setTimeout(function () { overlay.remove(); }, 350);
+  }
 
   // ---- Utility ----
   function escapeHtml(str) {

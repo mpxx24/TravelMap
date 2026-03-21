@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<TravelDataSettings>(configuration.GetSection("Storage"));
         services.AddSingleton<ITravelDataService, TravelDataService>();
+        services.AddHostedService<BlobContainerInitializer>();
         return services;
     }
 }

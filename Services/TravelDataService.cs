@@ -20,7 +20,6 @@ public class TravelDataService : ITravelDataService
     {
         _logger = logger;
         _dataDir = Path.Combine(env.ContentRootPath, "App_Data");
-        Directory.CreateDirectory(_dataDir);
 
         var blobEndpoint = settings.Value.BlobEndpoint;
         if (!string.IsNullOrEmpty(blobEndpoint))
@@ -28,7 +27,6 @@ public class TravelDataService : ITravelDataService
             _containerClient = new BlobContainerClient(
                 new Uri($"{blobEndpoint.TrimEnd('/')}/{Constants.BlobContainerName}"),
                 new DefaultAzureCredential());
-            _containerClient.CreateIfNotExists();
         }
     }
 
@@ -90,6 +88,7 @@ public class TravelDataService : ITravelDataService
             return;
         }
 
+        Directory.CreateDirectory(_dataDir);
         await File.WriteAllTextAsync(Path.Combine(_dataDir, blobName), json, ct);
     }
 

@@ -4,6 +4,14 @@
 
 <div id="map"></div>
 
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <div id="map-loading">
+        <div class="map-loading-spinner"></div>
+        <div class="map-loading-text">Loading your map…</div>
+    </div>
+}
+
 <!-- Legend -->
 <div class="map-legend" id="legend">
     <div class="legend-title">Travel Map</div>

@@ -376,3 +376,40 @@ html, body {
 
 /* d-inline utility */
 .d-inline { display: inline !important; }
+
+/* ---- Map loading overlay ---- */
+#map-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--body-bg);
+  transition: opacity 0.3s ease;
+}
+
+#map-loading.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--card-border);
+  border-top-color: #28a745;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.map-loading-text {
+  font-size: 0.85rem;
+  color: var(--muted-color);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
