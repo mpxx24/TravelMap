@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
     2: "#17a2b8", // Islands - blue
     3: "#ffc107", // Both - gold
   };
+  var WISHLIST_COLOR = "#9b59b6"; // purple
 
   var VISIT_LABELS = {
     1: "Mainland",
@@ -106,6 +107,16 @@ document.addEventListener("DOMContentLoaded", function () {
     var visit = visits[code];
 
     if (visit) {
+      if (visit.isWishlist) {
+        return {
+          fillColor: WISHLIST_COLOR,
+          fillOpacity: 0.25,
+          color: WISHLIST_COLOR,
+          weight: 1.5,
+          opacity: 0.7,
+          dashArray: "4 3",
+        };
+      }
       return {
         fillColor: COLORS[visit.visitType] || COLORS[1],
         fillOpacity: 0.55,
@@ -168,7 +179,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // ---- Popup (edit form) ----
   function showPopup(layer, code, name) {
     var visit = visits[code] || null;
-    var selectedType = visit ? visit.visitType : 1;
+    var isWishlist = visit ? !!visit.isWishlist : false;
+    var selectedType = visit && !isWishlist ? visit.visitType : 1;
     var firstVisited = visit && visit.firstVisited
       ? visit.firstVisited.substring(0, 10)
       : "";
@@ -177,9 +189,16 @@ document.addEventListener("DOMContentLoaded", function () {
       : "";
     var notes = visit ? visit.notes || "" : "";
 
+    var visitedStyle = isWishlist ? ' style="display:none"' : "";
     var html =
       '<div class="popup-form">' +
       '<div class="popup-title">' + escapeHtml(name) + "</div>" +
+      "<label>Mode</label>" +
+      '<div class="radio-group mode-group">' +
+      '<div class="radio-btn mode-btn' + (!isWishlist ? " active" : "") + '" data-mode="visited">Visited</div>' +
+      '<div class="radio-btn mode-btn' + (isWishlist ? " active mode-wishlist" : "") + '" data-mode="wishlist">Wishlist</div>' +
+      "</div>" +
+      '<div class="visit-details"' + visitedStyle + '>' +
       "<label>Visit type</label>" +
       '<div class="radio-group">' +
       '<div class="radio-btn' + (selectedType === 1 ? " active" : "") + '" data-value="1">Mainland</div>' +
@@ -190,6 +209,7 @@ document.addEventListener("DOMContentLoaded", function () {
       '<input type="date" class="popup-first-visited" value="' + firstVisited + '">' +
       "<label>Last visited</label>" +
       '<input type="date" class="popup-last-visited" value="' + lastVisited + '">' +
+      "</div>" +
       "<label>Notes</label>" +
       '<textarea class="popup-notes" placeholder="Optional notes...">' + escapeHtml(notes) + "</textarea>" +
       '<div class="popup-actions">' +
@@ -208,14 +228,28 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .openPopup();
 
-    // Wire up radio buttons
     setTimeout(function () {
       var popup = document.querySelector(".popup-form");
       if (!popup) return;
 
-      popup.querySelectorAll(".radio-btn").forEach(function (btn) {
+      // Mode toggle (Visited / Wishlist)
+      popup.querySelectorAll(".mode-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          popup.querySelectorAll(".radio-btn").forEach(function (b) {
+          popup.querySelectorAll(".mode-btn").forEach(function (b) {
+            b.classList.remove("active", "mode-wishlist");
+          });
+          btn.classList.add("active");
+          var wishlistMode = btn.getAttribute("data-mode") === "wishlist";
+          if (wishlistMode) btn.classList.add("mode-wishlist");
+          var details = popup.querySelector(".visit-details");
+          if (details) details.style.display = wishlistMode ? "none" : "";
+        });
+      });
+
+      // Visit type radio buttons
+      popup.querySelectorAll(".radio-group:not(.mode-group) .radio-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          popup.querySelectorAll(".radio-group:not(.mode-group) .radio-btn").forEach(function (b) {
             b.classList.remove("active");
           });
           btn.classList.add("active");
@@ -226,7 +260,9 @@ document.addEventListener("DOMContentLoaded", function () {
       var saveBtn = popup.querySelector(".btn-save");
       if (saveBtn) {
         saveBtn.addEventListener("click", function () {
-          var activeType = popup.querySelector(".radio-btn.active");
+          var modeBtn = popup.querySelector(".mode-btn.active");
+          var wishlist = modeBtn ? modeBtn.getAttribute("data-mode") === "wishlist" : false;
+          var activeType = popup.querySelector(".radio-group:not(.mode-group) .radio-btn.active");
           var visitType = activeType
             ? parseInt(activeType.getAttribute("data-value"))
             : 1;
@@ -234,11 +270,10 @@ document.addEventListener("DOMContentLoaded", function () {
           var visitData = {
             countryCode: code,
             countryName: name,
-            visitType: visitType,
-            firstVisited:
-              popup.querySelector(".popup-first-visited").value || null,
-            lastVisited:
-              popup.querySelector(".popup-last-visited").value || null,
+            isWishlist: wishlist,
+            visitType: wishlist ? 0 : visitType,
+            firstVisited: wishlist ? null : (popup.querySelector(".popup-first-visited").value || null),
+            lastVisited: wishlist ? null : (popup.querySelector(".popup-last-visited").value || null),
             notes: popup.querySelector(".popup-notes").value || null,
           };
 
@@ -315,16 +350,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ---- Stats ----
   function updateStats() {
-    var codes = Object.keys(visits);
-    var count = codes.length;
+    var visitedCodes = Object.keys(visits).filter(function (c) { return !visits[c].isWishlist; });
+    var count = visitedCodes.length;
     var total = 195;
     var pct = Math.round((count / total) * 100);
     var el = document.getElementById("legend-stats");
     if (el) el.textContent = count + " / " + total + " countries (" + pct + "%)";
 
-    // Continent breakdown
+    // Continent breakdown (visited only)
     var breakdown = {};
-    codes.forEach(function (code) {
+    visitedCodes.forEach(function (code) {
       var c = CONTINENT_MAP[code] || "Other";
       breakdown[c] = (breakdown[c] || 0) + 1;
     });

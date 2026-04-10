@@ -292,6 +292,21 @@ html, body {
   color: #000;
 }
 
+.popup-form .radio-btn.mode-btn.active:not(.mode-wishlist) {
+  background: #28a745;
+  color: #fff;
+}
+
+.popup-form .radio-btn.mode-wishlist {
+  background: #9b59b6;
+  color: #fff;
+}
+
+.legend-wishlist {
+  background: rgba(155, 89, 182, 0.35);
+  border: 1.5px dashed #9b59b6;
+}
+
 .popup-form input[type="date"],
 .popup-form textarea {
   width: 100%;

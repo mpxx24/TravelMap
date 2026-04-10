@@ -106,4 +106,26 @@ public class TravelDataServiceTests
 
         Assert.That(data.LastModified, Is.GreaterThan(before));
     }
+
+    [Test]
+    public async Task UpsertVisitAsync_PreservesIsWishlist_WhenTrue()
+    {
+        var visit = new CountryVisit { CountryCode = "JPN", CountryName = "Japan", IsWishlist = true };
+
+        await _service.UpsertVisitAsync("user@example.com", visit);
+
+        var data = await _service.LoadAsync("user@example.com");
+        Assert.That(data.Visits[0].IsWishlist, Is.True);
+    }
+
+    [Test]
+    public async Task UpsertVisitAsync_IsWishlistDefaultsFalse_WhenNotSet()
+    {
+        var visit = new CountryVisit { CountryCode = "POL", CountryName = "Poland", VisitType = VisitType.Mainland };
+
+        await _service.UpsertVisitAsync("user@example.com", visit);
+
+        var data = await _service.LoadAsync("user@example.com");
+        Assert.That(data.Visits[0].IsWishlist, Is.False);
+    }
 }

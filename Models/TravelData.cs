@@ -15,6 +15,7 @@ public class CountryVisit
     public DateTime? FirstVisited { get; set; }
     public DateTime? LastVisited { get; set; }
     public string? Notes { get; set; }
+    public bool IsWishlist { get; set; }
 }
 
 public class TravelData
