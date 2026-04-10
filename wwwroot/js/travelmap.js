@@ -28,6 +28,14 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   var CONTINENT_ORDER = ["Europe", "Asia", "Africa", "N. America", "S. America", "Oceania"];
 
+  // ---- Country code lookup ----
+  // Natural Earth uses "-99" as a sentinel for "no ISO code assigned".
+  // Fall back to ADM0_A3 so each country gets a unique, meaningful code.
+  function getCode(props) {
+    var iso = props.ISO_A3;
+    return (iso && iso !== "-99") ? iso : props.ADM0_A3;
+  }
+
   // ---- Color scheme ----
   var COLORS = {
     1: "#28a745", // Mainland - green
@@ -84,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Re-style GeoJSON borders
     if (geoLayer) {
       geoLayer.eachLayer(function (layer) {
-        var code = layer.feature.properties.ISO_A3 || layer.feature.properties.ADM0_A3;
+        var code = getCode(layer.feature.properties);
         var visit = visits[code];
         layer.setStyle(getStyle(layer.feature, !!visit, t));
       });
@@ -103,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // ---- Country styling ----
   function getStyle(feature, isVisited, themeOverride) {
     var t = themeOverride || localStorage.getItem("theme") || "dark";
-    var code = feature.properties.ISO_A3 || feature.properties.ADM0_A3;
+    var code = getCode(feature.properties);
     var visit = visits[code];
 
     if (visit) {
@@ -139,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function onEachFeature(feature, layer) {
     var props = feature.properties;
     var name = props.NAME || props.ADMIN || "Unknown";
-    var code = props.ISO_A3 || props.ADM0_A3;
+    var code = getCode(props);
 
     // Tooltip on hover
     layer.bindTooltip(name, {
@@ -540,7 +548,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       geoLayer = L.geoJSON(geojson, {
         style: function (feature) {
-          var code = feature.properties.ISO_A3 || feature.properties.ADM0_A3;
+          var code = getCode(feature.properties);
           return getStyle(feature, !!visits[code]);
         },
         onEachFeature: onEachFeature,

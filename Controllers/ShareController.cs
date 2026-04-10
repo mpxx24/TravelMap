@@ -10,6 +10,7 @@ public class ShareController : Controller
 {
     private readonly ITravelDataService _service;
     private readonly ILogger<ShareController> _logger;
+    private static readonly JsonSerializerOptions _webJson = new(JsonSerializerDefaults.Web);
 
     public ShareController(ITravelDataService service, ILogger<ShareController> logger)
     {
@@ -24,7 +25,7 @@ public class ShareController : Controller
         var data = await _service.LoadByShareTokenAsync(token, ct);
         if (data == null) return NotFound("Shared map not found or link has been revoked.");
 
-        ViewBag.InitialVisitsJson = JsonSerializer.Serialize(data.Visits);
+        ViewBag.InitialVisitsJson = JsonSerializer.Serialize(data.Visits, _webJson);
         ViewBag.IsReadOnly = true;
         _logger.LogInformation("Shared map viewed for token {Token}", token);
         return View();

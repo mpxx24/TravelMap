@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -15,6 +16,10 @@ public class TravelDataService : ITravelDataService
     private readonly BlobContainerClient? _containerClient;
     private readonly ILogger<TravelDataService> _logger;
     private static readonly JsonSerializerOptions _json = new() { WriteIndented = true };
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _userLocks = new();
+
+    private static SemaphoreSlim GetUserLock(string email) =>
+        _userLocks.GetOrAdd(GetBlobName(email), static _ => new SemaphoreSlim(1, 1));
 
     public TravelDataService(IWebHostEnvironment env, IOptions<TravelDataSettings> settings, ILogger<TravelDataService> logger)
     {
@@ -98,16 +103,26 @@ public class TravelDataService : ITravelDataService
             throw new ArgumentException("Email cannot be null or empty.", nameof(email));
         if (visit == null) throw new ArgumentNullException(nameof(visit));
 
-        var data = await LoadAsync(email, ct);
-        var index = data.Visits.FindIndex(v =>
-            v.CountryCode.Equals(visit.CountryCode, StringComparison.OrdinalIgnoreCase));
+        var sem = GetUserLock(email);
+        await sem.WaitAsync(ct);
+        try
+        {
+            var data = await LoadAsync(email, ct);
+            var index = data.Visits.FindIndex(v =>
+                v.CountryCode.Equals(visit.CountryCode, StringComparison.OrdinalIgnoreCase));
 
-        if (index >= 0)
-            data.Visits[index] = visit;
-        else
-            data.Visits.Add(visit);
+            if (index >= 0)
+                data.Visits[index] = visit;
+            else
+                data.Visits.Add(visit);
 
-        await SaveAsync(data, ct);
+            await SaveAsync(data, ct);
+        }
+        finally
+        {
+            sem.Release();
+        }
+
         return visit;
     }
 
@@ -118,10 +133,19 @@ public class TravelDataService : ITravelDataService
         if (string.IsNullOrEmpty(countryCode))
             throw new ArgumentException("Country code cannot be null or empty.", nameof(countryCode));
 
-        var data = await LoadAsync(email, ct);
-        data.Visits.RemoveAll(v =>
-            v.CountryCode.Equals(countryCode, StringComparison.OrdinalIgnoreCase));
-        await SaveAsync(data, ct);
+        var sem = GetUserLock(email);
+        await sem.WaitAsync(ct);
+        try
+        {
+            var data = await LoadAsync(email, ct);
+            data.Visits.RemoveAll(v =>
+                v.CountryCode.Equals(countryCode, StringComparison.OrdinalIgnoreCase));
+            await SaveAsync(data, ct);
+        }
+        finally
+        {
+            sem.Release();
+        }
     }
 
     public async Task<string> GenerateShareTokenAsync(string email, CancellationToken ct = default)

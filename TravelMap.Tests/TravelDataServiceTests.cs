@@ -232,4 +232,23 @@ public class TravelDataServiceTests
         var data = await _service.LoadAsync("user@example.com");
         Assert.That(data.Visits[0].IsWishlist, Is.False);
     }
+
+    [Test]
+    public async Task UpsertVisitAsync_PreservesAllVisits_WhenCalledConcurrently()
+    {
+        var countries = new[]
+        {
+            new CountryVisit { CountryCode = "POL", CountryName = "Poland", VisitType = VisitType.Mainland },
+            new CountryVisit { CountryCode = "DEU", CountryName = "Germany", VisitType = VisitType.Mainland },
+            new CountryVisit { CountryCode = "FRA", CountryName = "France", VisitType = VisitType.Mainland },
+            new CountryVisit { CountryCode = "ITA", CountryName = "Italy", VisitType = VisitType.Mainland },
+            new CountryVisit { CountryCode = "ESP", CountryName = "Spain", VisitType = VisitType.Mainland },
+        };
+
+        await Task.WhenAll(countries.Select(c => _service.UpsertVisitAsync("user@example.com", c)));
+
+        var data = await _service.LoadAsync("user@example.com");
+        var savedCodes = data.Visits.Select(v => v.CountryCode).OrderBy(c => c).ToList();
+        Assert.That(savedCodes, Is.EqualTo(new[] { "DEU", "ESP", "FRA", "ITA", "POL" }));
+    }
 }
