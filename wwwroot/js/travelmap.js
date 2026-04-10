@@ -13,6 +13,21 @@ document.addEventListener("DOMContentLoaded", function () {
   var visits = {}; // countryCode -> CountryVisit
   var geoLayer = null;
 
+  // ---- Continent lookup (ISO alpha-3 -> continent label) ----
+  var _continentGroups = {
+    "Europe":     ["ALB","AND","AUT","BLR","BEL","BIH","BGR","HRV","CYP","CZE","DNK","EST","FIN","FRA","DEU","GRC","HUN","ISL","IRL","ITA","XKX","LVA","LIE","LTU","LUX","MLT","MDA","MCO","MNE","NLD","MKD","NOR","POL","PRT","ROU","RUS","SMR","SRB","SVK","SVN","ESP","SWE","CHE","UKR","GBR","VAT"],
+    "Asia":       ["AFG","ARM","AZE","BHR","BGD","BTN","BRN","KHM","CHN","GEO","IND","IDN","IRN","IRQ","ISR","JPN","JOR","KAZ","KWT","KGZ","LAO","LBN","MYS","MDV","MNG","MMR","NPL","PRK","OMN","PAK","PHL","QAT","SAU","SGP","KOR","LKA","SYR","TWN","TJK","THA","TLS","TUR","TKM","ARE","UZB","VNM","YEM"],
+    "Africa":     ["DZA","AGO","BEN","BWA","BFA","BDI","CMR","CPV","CAF","TCD","COM","COD","COG","CIV","DJI","EGY","GNQ","ERI","ETH","GAB","GMB","GHA","GIN","GNB","KEN","LSO","LBR","LBY","MDG","MWI","MLI","MRT","MUS","MAR","MOZ","NAM","NER","NGA","RWA","STP","SEN","SLE","SOM","ZAF","SSD","SDN","SWZ","TZA","TGO","TUN","UGA","ZMB","ZWE"],
+    "N. America": ["ATG","BHS","BRB","BLZ","CAN","CRI","CUB","DMA","DOM","SLV","GRD","GTM","HTI","HND","JAM","MEX","NIC","PAN","KNA","LCA","VCT","TTO","USA"],
+    "S. America": ["ARG","BOL","BRA","CHL","COL","ECU","GUY","PRY","PER","SUR","URY","VEN"],
+    "Oceania":    ["AUS","FJI","KIR","MHL","FSM","NRU","NZL","PLW","PNG","WSM","SLB","TON","TUV","VUT"]
+  };
+  var CONTINENT_MAP = {};
+  Object.keys(_continentGroups).forEach(function (c) {
+    _continentGroups[c].forEach(function (code) { CONTINENT_MAP[code] = c; });
+  });
+  var CONTINENT_ORDER = ["Europe", "Asia", "Africa", "N. America", "S. America", "Oceania"];
+
   // ---- Color scheme ----
   var COLORS = {
     1: "#28a745", // Mainland - green
@@ -300,13 +315,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ---- Stats ----
   function updateStats() {
-    var count = Object.keys(visits).length;
+    var codes = Object.keys(visits);
+    var count = codes.length;
     var total = 195;
     var pct = Math.round((count / total) * 100);
     var el = document.getElementById("legend-stats");
-    if (el) {
-      el.textContent = count + " / " + total + " countries (" + pct + "%)";
+    if (el) el.textContent = count + " / " + total + " countries (" + pct + "%)";
+
+    // Continent breakdown
+    var breakdown = {};
+    codes.forEach(function (code) {
+      var c = CONTINENT_MAP[code] || "Other";
+      breakdown[c] = (breakdown[c] || 0) + 1;
+    });
+    var bd = document.getElementById("legend-breakdown");
+    if (bd) {
+      bd.innerHTML = CONTINENT_ORDER
+        .filter(function (c) { return breakdown[c]; })
+        .map(function (c) {
+          return '<div class="breakdown-row"><span>' + c + '</span><span>' + breakdown[c] + '</span></div>';
+        }).join("");
     }
+  }
+
+  // ---- Stats toggle ----
+  var legendToggle = document.getElementById("legend-toggle");
+  var legendBreakdown = document.getElementById("legend-breakdown");
+  if (legendToggle && legendBreakdown) {
+    legendToggle.addEventListener("click", function () {
+      var expanded = legendToggle.getAttribute("aria-expanded") === "true";
+      legendToggle.setAttribute("aria-expanded", String(!expanded));
+      legendToggle.innerHTML = (!expanded ? "&#9662;" : "&#9656;") + " by continent";
+      legendBreakdown.classList.toggle("breakdown-open", !expanded);
+    });
   }
 
   // ---- Load GeoJSON + visits in parallel ----

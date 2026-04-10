@@ -171,6 +171,41 @@ html, body {
   color: var(--muted-color);
 }
 
+.legend-toggle {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--muted-color);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 3px 0 0;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+
+.legend-toggle:hover { color: var(--body-color); }
+
+.legend-breakdown {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.2s ease;
+}
+
+.legend-breakdown.breakdown-open {
+  max-height: 200px;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.73rem;
+  color: var(--body-color);
+  padding: 2px 0;
+  margin-top: 6px;
+}
+
 /* ---- Leaflet popup overrides ---- */
 .leaflet-popup-content-wrapper {
   background: var(--popup-bg) !important;
