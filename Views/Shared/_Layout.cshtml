@@ -27,6 +27,9 @@
                 <img src="@avatarUrl" alt="@userName" class="auth-avatar" referrerpolicy="no-referrer" />
             }
             <span class="auth-name">@userName</span>
+            <button id="share-btn" class="auth-btn" title="Share your map">
+                <i class="bi bi-share"></i>
+            </button>
             <form method="post" asp-controller="Account" asp-action="Logout" class="d-inline">
                 <button type="submit" class="auth-btn" title="Sign out">
                     <i class="bi bi-box-arrow-right"></i>
@@ -44,6 +47,25 @@
         </button>
     </div>
 
+    @if (isAuthenticated)
+    {
+        <div id="share-panel" class="share-panel" hidden>
+            <div class="share-panel-title"><i class="bi bi-share"></i> Share your map</div>
+            <p class="share-panel-desc">Anyone with this link can view your map (read-only).</p>
+            <div class="share-url-row">
+                <input id="share-url-input" type="text" class="share-url-input" readonly placeholder="Click Generate to create a link">
+                <button id="share-copy-btn" class="share-action-btn" title="Copy link" disabled>
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+            <div class="share-actions">
+                <button id="share-generate-btn" class="share-action-btn share-generate">Generate link</button>
+                <button id="share-revoke-btn" class="share-action-btn share-revoke" disabled>Revoke</button>
+                <button id="share-close-btn" class="share-action-btn share-close">Close</button>
+            </div>
+        </div>
+    }
+
     @RenderBody()
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -51,7 +73,9 @@
         // Pass auth state to JS
         window.TravelMapConfig = {
             isAuthenticated: @(isAuthenticated ? "true" : "false"),
-            userEmail: "@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(userEmail))"
+            userEmail: "@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(userEmail))",
+            isReadOnly: @(ViewBag.IsReadOnly == true ? "true" : "false"),
+            initialVisits: @Html.Raw(ViewBag.InitialVisitsJson ?? "null")
         };
     </script>
     <script src="~/js/travelmap.js" asp-append-version="true"></script>

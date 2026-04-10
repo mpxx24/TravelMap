@@ -330,6 +330,15 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function loadVisits() {
+    if (config.initialVisits) {
+      return Promise.resolve().then(function () {
+        visits = {};
+        config.initialVisits.forEach(function (v) {
+          visits[v.countryCode] = v;
+        });
+      });
+    }
+
     if (!config.isAuthenticated) return Promise.resolve();
 
     return fetch("/api/visits")
@@ -346,6 +355,60 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch(function (err) {
         console.error("Load visits error:", err);
       });
+  }
+
+  // ---- Share panel ----
+  var shareBtn = document.getElementById("share-btn");
+  var sharePanel = document.getElementById("share-panel");
+  var shareUrlInput = document.getElementById("share-url-input");
+  var shareCopyBtn = document.getElementById("share-copy-btn");
+  var shareGenerateBtn = document.getElementById("share-generate-btn");
+  var shareRevokeBtn = document.getElementById("share-revoke-btn");
+  var shareCloseBtn = document.getElementById("share-close-btn");
+
+  if (shareBtn && sharePanel) {
+    shareBtn.addEventListener("click", function () {
+      sharePanel.hidden = !sharePanel.hidden;
+    });
+
+    shareCloseBtn.addEventListener("click", function () {
+      sharePanel.hidden = true;
+    });
+
+    shareGenerateBtn.addEventListener("click", function () {
+      shareGenerateBtn.disabled = true;
+      fetch("/api/share", { method: "POST" })
+        .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+        .then(function (data) {
+          shareUrlInput.value = data.shareUrl;
+          shareCopyBtn.disabled = false;
+          shareRevokeBtn.disabled = false;
+          shareGenerateBtn.textContent = "Regenerate";
+        })
+        .catch(function () { console.error("Share generate failed"); })
+        .finally(function () { shareGenerateBtn.disabled = false; });
+    });
+
+    shareCopyBtn.addEventListener("click", function () {
+      navigator.clipboard.writeText(shareUrlInput.value).then(function () {
+        var icon = shareCopyBtn.querySelector("i");
+        icon.className = "bi bi-clipboard-check";
+        setTimeout(function () { icon.className = "bi bi-clipboard"; }, 2000);
+      });
+    });
+
+    shareRevokeBtn.addEventListener("click", function () {
+      if (!confirm("Revoke this share link? Anyone with the link will lose access.")) return;
+      fetch("/api/share", { method: "DELETE" })
+        .then(function (res) { if (!res.ok) throw new Error(); })
+        .then(function () {
+          shareUrlInput.value = "";
+          shareCopyBtn.disabled = true;
+          shareRevokeBtn.disabled = true;
+          shareGenerateBtn.textContent = "Generate link";
+        })
+        .catch(function () { console.error("Share revoke failed"); });
+    });
   }
 
   // ---- Stats ----

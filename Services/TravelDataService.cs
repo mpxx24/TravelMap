@@ -124,6 +124,122 @@ public class TravelDataService : ITravelDataService
         await SaveAsync(data, ct);
     }
 
+    public async Task<string> GenerateShareTokenAsync(string email, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(email))
+            throw new ArgumentException("Email cannot be null or empty.", nameof(email));
+
+        var data = await LoadAsync(email, ct);
+
+        // Revoke old token if present
+        if (!string.IsNullOrEmpty(data.ShareToken))
+            await DeleteSharePointerAsync(data.ShareToken, ct);
+
+        var token = Guid.NewGuid().ToString("N");
+        var userBlobName = GetBlobName(email);
+
+        await WriteSharePointerAsync(token, userBlobName, ct);
+
+        data.ShareToken = token;
+        await SaveAsync(data, ct);
+        return token;
+    }
+
+    public async Task RevokeShareTokenAsync(string email, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(email))
+            throw new ArgumentException("Email cannot be null or empty.", nameof(email));
+
+        var data = await LoadAsync(email, ct);
+        if (string.IsNullOrEmpty(data.ShareToken)) return;
+
+        await DeleteSharePointerAsync(data.ShareToken, ct);
+        data.ShareToken = null;
+        await SaveAsync(data, ct);
+    }
+
+    public async Task<TravelData?> LoadByShareTokenAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+
+        var userBlobName = await ReadSharePointerAsync(token, ct);
+        if (userBlobName == null) return null;
+
+        if (_containerClient != null)
+        {
+            try
+            {
+                var blobClient = _containerClient.GetBlobClient(userBlobName);
+                var response = await blobClient.DownloadContentAsync(ct);
+                return JsonSerializer.Deserialize<TravelData>(response.Value.Content.ToString(), _json);
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+            {
+                return null;
+            }
+        }
+
+        var filePath = Path.Combine(_dataDir, userBlobName);
+        if (!File.Exists(filePath)) return null;
+        var text = await File.ReadAllTextAsync(filePath, ct);
+        return JsonSerializer.Deserialize<TravelData>(text, _json);
+    }
+
+    private async Task WriteSharePointerAsync(string token, string userBlobName, CancellationToken ct)
+    {
+        var pointerName = SharePointerName(token);
+        if (_containerClient != null)
+        {
+            var blob = _containerClient.GetBlobClient(pointerName);
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(userBlobName));
+            await blob.UploadAsync(stream, overwrite: true, cancellationToken: ct);
+        }
+        else
+        {
+            Directory.CreateDirectory(_dataDir);
+            await File.WriteAllTextAsync(Path.Combine(_dataDir, pointerName), userBlobName, ct);
+        }
+    }
+
+    private async Task DeleteSharePointerAsync(string token, CancellationToken ct)
+    {
+        var pointerName = SharePointerName(token);
+        if (_containerClient != null)
+        {
+            var blob = _containerClient.GetBlobClient(pointerName);
+            await blob.DeleteIfExistsAsync(cancellationToken: ct);
+        }
+        else
+        {
+            var filePath = Path.Combine(_dataDir, pointerName);
+            if (File.Exists(filePath)) File.Delete(filePath);
+        }
+    }
+
+    private async Task<string?> ReadSharePointerAsync(string token, CancellationToken ct)
+    {
+        var pointerName = SharePointerName(token);
+        if (_containerClient != null)
+        {
+            try
+            {
+                var blob = _containerClient.GetBlobClient(pointerName);
+                var response = await blob.DownloadContentAsync(ct);
+                return response.Value.Content.ToString().Trim();
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+            {
+                return null;
+            }
+        }
+
+        var filePath = Path.Combine(_dataDir, pointerName);
+        if (!File.Exists(filePath)) return null;
+        return (await File.ReadAllTextAsync(filePath, ct)).Trim();
+    }
+
+    private static string SharePointerName(string token) => $"share-{token}.token";
+
     private static string GetBlobName(string email)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(email.ToLowerInvariant()));

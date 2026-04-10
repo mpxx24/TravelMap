@@ -427,6 +427,106 @@ html, body {
 /* d-inline utility */
 .d-inline { display: inline !important; }
 
+/* ---- Share panel ---- */
+.share-panel {
+  position: fixed;
+  top: 56px;
+  right: 12px;
+  z-index: 1000;
+  padding: 16px 18px;
+  background: var(--legend-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  width: 300px;
+  box-shadow: 0 4px 16px var(--popup-shadow);
+}
+
+.share-panel-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--body-color);
+}
+
+.share-panel-desc {
+  font-size: 0.78rem;
+  color: var(--muted-color);
+  margin: 0 0 12px;
+}
+
+.share-url-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.share-url-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 0.75rem;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.share-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.share-action-btn {
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--btn-color);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.share-action-btn:hover:not(:disabled) { background: var(--btn-hover-bg); }
+.share-action-btn:disabled { opacity: 0.45; cursor: default; }
+
+.share-generate {
+  flex: 1;
+  background: #28a745;
+  color: #fff;
+  border-color: transparent;
+}
+
+.share-generate:hover:not(:disabled) { background: #218838; }
+
+.share-revoke {
+  color: #dc3545;
+  border-color: #dc3545;
+  background: transparent;
+}
+
+.share-revoke:hover:not(:disabled) { background: #dc3545; color: #fff; }
+
+/* ---- Read-only banner ---- */
+.readonly-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 6px 16px;
+  background: var(--legend-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  font-size: 0.78rem;
+  color: var(--muted-color);
+  pointer-events: none;
+}
+
 /* ---- Map loading overlay ---- */
 #map-loading {
   position: fixed;

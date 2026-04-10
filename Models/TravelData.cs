@@ -23,4 +23,5 @@ public class TravelData
     public string UserEmail { get; set; } = string.Empty;
     public List<CountryVisit> Visits { get; set; } = new();
     public DateTime LastModified { get; set; }
+    public string? ShareToken { get; set; }
 }

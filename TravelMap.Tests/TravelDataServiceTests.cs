@@ -108,6 +108,55 @@ public class TravelDataServiceTests
     }
 
     [Test]
+    public async Task GenerateShareTokenAsync_ReturnsToken_AndPersistsInData()
+    {
+        await _service.UpsertVisitAsync("user@example.com",
+            new CountryVisit { CountryCode = "POL", CountryName = "Poland" });
+
+        var token = await _service.GenerateShareTokenAsync("user@example.com");
+
+        Assert.That(token, Is.Not.Null.And.Not.Empty);
+        var data = await _service.LoadAsync("user@example.com");
+        Assert.That(data.ShareToken, Is.EqualTo(token));
+    }
+
+    [Test]
+    public async Task LoadByShareTokenAsync_ReturnsData_WhenTokenValid()
+    {
+        await _service.UpsertVisitAsync("user@example.com",
+            new CountryVisit { CountryCode = "POL", CountryName = "Poland" });
+        var token = await _service.GenerateShareTokenAsync("user@example.com");
+
+        var result = await _service.LoadByShareTokenAsync(token);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.UserEmail, Is.EqualTo("user@example.com"));
+    }
+
+    [Test]
+    public async Task LoadByShareTokenAsync_ReturnsNull_WhenTokenInvalid()
+    {
+        var result = await _service.LoadByShareTokenAsync("nonexistent-token");
+
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public async Task RevokeShareTokenAsync_ClearsToken()
+    {
+        await _service.UpsertVisitAsync("user@example.com",
+            new CountryVisit { CountryCode = "POL", CountryName = "Poland" });
+        var token = await _service.GenerateShareTokenAsync("user@example.com");
+
+        await _service.RevokeShareTokenAsync("user@example.com");
+
+        var data = await _service.LoadAsync("user@example.com");
+        Assert.That(data.ShareToken, Is.Null.Or.Empty);
+        var result = await _service.LoadByShareTokenAsync(token);
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
     public async Task UpsertVisitAsync_PreservesIsWishlist_WhenTrue()
     {
         var visit = new CountryVisit { CountryCode = "JPN", CountryName = "Japan", IsWishlist = true };
