@@ -218,6 +218,11 @@ document.addEventListener("DOMContentLoaded", function () {
         ? '<button class="btn-remove" data-code="' + code + '">Remove</button>'
         : "") +
       "</div>" +
+      (visit ? '<div class="popup-photos"><label>Photos</label><div class="photo-grid" id="photo-grid-' + code + '"></div>' +
+        '<div class="photo-upload-row">' +
+        '<button class="btn-add-photo">+ Add photo</button>' +
+        '<input type="file" class="photo-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">' +
+        '<span class="photo-upload-status"></span></div></div>' : "") +
       "</div>";
 
     layer
@@ -288,7 +293,81 @@ document.addEventListener("DOMContentLoaded", function () {
           deleteVisit(code, layer);
         });
       }
+
+      // Photo gallery
+      if (visit) {
+        renderPhotoGrid(code, popup);
+
+        var addPhotoBtn = popup.querySelector(".btn-add-photo");
+        var fileInput = popup.querySelector(".photo-file-input");
+        var uploadStatus = popup.querySelector(".photo-upload-status");
+
+        if (addPhotoBtn && fileInput) {
+          addPhotoBtn.addEventListener("click", function () { fileInput.click(); });
+          fileInput.addEventListener("change", function () {
+            var file = fileInput.files[0];
+            if (!file) return;
+            uploadStatus.textContent = "Uploading…";
+            addPhotoBtn.disabled = true;
+            var form = new FormData();
+            form.append("photo", file);
+            fetch("/api/visits/" + encodeURIComponent(code) + "/photos", {
+              method: "POST",
+              body: form,
+            })
+              .then(function (res) {
+                if (!res.ok) return res.text().then(function (t) { throw new Error(t); });
+                return res.json();
+              })
+              .then(function (data) {
+                if (!visits[code]) visits[code] = { countryCode: code, photoIds: [] };
+                if (!visits[code].photoIds) visits[code].photoIds = [];
+                visits[code].photoIds.push(data.photoId);
+                renderPhotoGrid(code, popup);
+                uploadStatus.textContent = "";
+              })
+              .catch(function (err) {
+                uploadStatus.textContent = "Upload failed: " + err.message;
+              })
+              .finally(function () {
+                addPhotoBtn.disabled = false;
+                fileInput.value = "";
+              });
+          });
+        }
+      }
     }, 50);
+  }
+
+  function renderPhotoGrid(code, popup) {
+    var grid = popup.querySelector("#photo-grid-" + code);
+    if (!grid) return;
+    var photoIds = (visits[code] && visits[code].photoIds) ? visits[code].photoIds : [];
+    grid.innerHTML = photoIds.map(function (id) {
+      return '<div class="photo-thumb-wrap">' +
+        '<img class="photo-thumb" src="/api/visits/' + encodeURIComponent(code) + '/photos/' + encodeURIComponent(id) + '" loading="lazy" alt="photo" ' +
+        'onclick="window.open(this.src,\'_blank\')">' +
+        '<button class="photo-delete" data-id="' + escapeHtml(id) + '" title="Delete photo">&times;</button>' +
+        '</div>';
+    }).join("");
+
+    grid.querySelectorAll(".photo-delete").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var photoId = btn.getAttribute("data-id");
+        fetch("/api/visits/" + encodeURIComponent(code) + "/photos/" + encodeURIComponent(photoId), {
+          method: "DELETE",
+        })
+          .then(function (res) { if (!res.ok) throw new Error(); })
+          .then(function () {
+            if (visits[code] && visits[code].photoIds) {
+              visits[code].photoIds = visits[code].photoIds.filter(function (id) { return id !== photoId; });
+            }
+            renderPhotoGrid(code, popup);
+          })
+          .catch(function () { console.error("Delete photo failed"); });
+      });
+    });
   }
 
   // ---- API calls ----

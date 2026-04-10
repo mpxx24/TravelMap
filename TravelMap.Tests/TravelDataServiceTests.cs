@@ -108,6 +108,61 @@ public class TravelDataServiceTests
     }
 
     [Test]
+    public async Task UploadPhotoAsync_AddsPhotoId_ToVisit()
+    {
+        await _service.UpsertVisitAsync("user@example.com",
+            new CountryVisit { CountryCode = "JPN", CountryName = "Japan" });
+        using var stream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF }); // jpeg magic bytes
+
+        var photoId = await _service.UploadPhotoAsync("user@example.com", "JPN", stream, "image/jpeg");
+
+        Assert.That(photoId, Is.Not.Null.And.Not.Empty);
+        var data = await _service.LoadAsync("user@example.com");
+        Assert.That(data.Visits[0].PhotoIds, Contains.Item(photoId));
+    }
+
+    [Test]
+    public async Task DeletePhotoAsync_RemovesPhotoId_FromVisit()
+    {
+        await _service.UpsertVisitAsync("user@example.com",
+            new CountryVisit { CountryCode = "JPN", CountryName = "Japan" });
+        using var stream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF });
+        var photoId = await _service.UploadPhotoAsync("user@example.com", "JPN", stream, "image/jpeg");
+
+        await _service.DeletePhotoAsync("user@example.com", "JPN", photoId);
+
+        var data = await _service.LoadAsync("user@example.com");
+        Assert.That(data.Visits[0].PhotoIds, Does.Not.Contain(photoId));
+    }
+
+    [Test]
+    public async Task GetPhotoAsync_ReturnsContent_WhenPhotoExists()
+    {
+        await _service.UpsertVisitAsync("user@example.com",
+            new CountryVisit { CountryCode = "JPN", CountryName = "Japan" });
+        var bytes = new byte[] { 0xFF, 0xD8, 0xFF };
+        using var uploadStream = new MemoryStream(bytes);
+        var photoId = await _service.UploadPhotoAsync("user@example.com", "JPN", uploadStream, "image/jpeg");
+
+        var result = await _service.GetPhotoAsync("user@example.com", "JPN", photoId);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Value.ContentType, Is.EqualTo("image/jpeg"));
+        var readBytes = new byte[bytes.Length];
+        await result.Value.Data.ReadExactlyAsync(readBytes);
+        Assert.That(readBytes, Is.EqualTo(bytes));
+        result.Value.Data.Dispose();
+    }
+
+    [Test]
+    public async Task GetPhotoAsync_ReturnsNull_WhenPhotoNotFound()
+    {
+        var result = await _service.GetPhotoAsync("user@example.com", "JPN", "nonexistent.jpg");
+
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
     public async Task GenerateShareTokenAsync_ReturnsToken_AndPersistsInData()
     {
         await _service.UpsertVisitAsync("user@example.com",

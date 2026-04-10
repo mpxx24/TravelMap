@@ -102,4 +102,53 @@ public class VisitsControllerTests
 
         Assert.That(result, Is.InstanceOf<OkResult>());
     }
+
+    [Test]
+    public async Task UploadPhotoAsync_ReturnsBadRequest_WhenNoFile()
+    {
+        var result = await _controller.UploadPhotoAsync("POL", null, default);
+
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+    }
+
+    [Test]
+    public async Task UploadPhotoAsync_ReturnsBadRequest_WhenUnsupportedContentType()
+    {
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.ContentType).Returns("application/pdf");
+        fileMock.Setup(f => f.Length).Returns(100);
+
+        var result = await _controller.UploadPhotoAsync("POL", fileMock.Object, default);
+
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+    }
+
+    [Test]
+    public async Task UploadPhotoAsync_ReturnsOk_WhenValid()
+    {
+        var bytes = new byte[100];
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        fileMock.Setup(f => f.Length).Returns(bytes.Length);
+        fileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream(bytes));
+
+        _serviceMock.Setup(s => s.UploadPhotoAsync("test@example.com", "POL", It.IsAny<Stream>(), "image/jpeg", default))
+            .ReturnsAsync("abc123.jpg");
+
+        var result = await _controller.UploadPhotoAsync("POL", fileMock.Object, default);
+
+        var ok = result as OkObjectResult;
+        Assert.That(ok, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task DeletePhotoAsync_ReturnsOk_WhenValid()
+    {
+        _serviceMock.Setup(s => s.DeletePhotoAsync("test@example.com", "POL", "abc123.jpg", default))
+            .Returns(Task.CompletedTask);
+
+        var result = await _controller.DeletePhotoAsync("POL", "abc123.jpg", default);
+
+        Assert.That(result, Is.InstanceOf<OkResult>());
+    }
 }

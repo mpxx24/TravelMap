@@ -185,6 +185,109 @@ public class TravelDataService : ITravelDataService
         return JsonSerializer.Deserialize<TravelData>(text, _json);
     }
 
+    public async Task<string> UploadPhotoAsync(string email, string countryCode, Stream photoStream, string contentType, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(email)) throw new ArgumentException("Email required.", nameof(email));
+        if (string.IsNullOrEmpty(countryCode)) throw new ArgumentException("Country code required.", nameof(countryCode));
+
+        var ext = ContentTypeToExtension(contentType);
+        var photoId = Guid.NewGuid().ToString("N") + ext;
+        var blobPath = PhotoBlobPath(GetBlobName(email)[..16], countryCode, photoId);
+
+        if (_containerClient != null)
+        {
+            var blob = _containerClient.GetBlobClient(blobPath);
+            await blob.UploadAsync(photoStream, overwrite: true, cancellationToken: ct);
+        }
+        else
+        {
+            var filePath = Path.Combine(_dataDir, blobPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            using var file = File.Create(filePath);
+            await photoStream.CopyToAsync(file, ct);
+        }
+
+        var data = await LoadAsync(email, ct);
+        var visit = data.Visits.FirstOrDefault(v =>
+            v.CountryCode.Equals(countryCode, StringComparison.OrdinalIgnoreCase));
+        if (visit == null) throw new InvalidOperationException($"No visit found for country {countryCode}.");
+        visit.PhotoIds.Add(photoId);
+        await SaveAsync(data, ct);
+        return photoId;
+    }
+
+    public async Task DeletePhotoAsync(string email, string countryCode, string photoId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(email)) throw new ArgumentException("Email required.", nameof(email));
+
+        var blobPath = PhotoBlobPath(GetBlobName(email)[..16], countryCode, photoId);
+        if (_containerClient != null)
+        {
+            await _containerClient.GetBlobClient(blobPath).DeleteIfExistsAsync(cancellationToken: ct);
+        }
+        else
+        {
+            var filePath = Path.Combine(_dataDir, blobPath);
+            if (File.Exists(filePath)) File.Delete(filePath);
+        }
+
+        var data = await LoadAsync(email, ct);
+        var visit = data.Visits.FirstOrDefault(v =>
+            v.CountryCode.Equals(countryCode, StringComparison.OrdinalIgnoreCase));
+        if (visit != null)
+        {
+            visit.PhotoIds.Remove(photoId);
+            await SaveAsync(data, ct);
+        }
+    }
+
+    public async Task<(string ContentType, Stream Data)?> GetPhotoAsync(string email, string countryCode, string photoId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(email)) return null;
+
+        var blobPath = PhotoBlobPath(GetBlobName(email)[..16], countryCode, photoId);
+        var contentType = ExtensionToContentType(Path.GetExtension(photoId));
+
+        if (_containerClient != null)
+        {
+            try
+            {
+                var blob = _containerClient.GetBlobClient(blobPath);
+                var response = await blob.DownloadStreamingAsync(cancellationToken: ct);
+                return (contentType, response.Value.Content);
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+            {
+                return null;
+            }
+        }
+
+        var filePath = Path.Combine(_dataDir, blobPath);
+        if (!File.Exists(filePath)) return null;
+        return (contentType, File.OpenRead(filePath));
+    }
+
+    private static string PhotoBlobPath(string emailHash16, string countryCode, string photoId) =>
+        $"photos/{emailHash16}/{countryCode.ToUpperInvariant()}/{photoId}";
+
+    private static string ContentTypeToExtension(string contentType) => contentType switch
+    {
+        "image/jpeg" => ".jpg",
+        "image/png" => ".png",
+        "image/gif" => ".gif",
+        "image/webp" => ".webp",
+        _ => ".jpg"
+    };
+
+    private static string ExtensionToContentType(string ext) => ext.ToLowerInvariant() switch
+    {
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        _ => "application/octet-stream"
+    };
+
     private async Task WriteSharePointerAsync(string token, string userBlobName, CancellationToken ct)
     {
         var pointerName = SharePointerName(token);
